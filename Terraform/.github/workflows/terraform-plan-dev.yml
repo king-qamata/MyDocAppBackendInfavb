@@ -1,0 +1,97 @@
+name: 'Terraform Plan - Dev'
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-plan-dev.yml'
+  workflow_dispatch:
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_DEV }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET_DEV }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID_DEV }}
+  TF_VAR_fcm_api_key: ${{ secrets.FCM_API_KEY_DEV }}
+  TF_VAR_paystack_secret_key: ${{ secrets.PAYSTACK_SECRET_KEY_DEV }}
+  TF_VAR_apns_key_id: ${{ secrets.APNS_KEY_ID_DEV }}
+  TF_VAR_apns_team_id: ${{ secrets.APNS_TEAM_ID_DEV }}
+  TF_VAR_apns_token: ${{ secrets.APNS_TOKEN_DEV }}
+  TF_VAR_admin_email: ${{ secrets.ADMIN_EMAIL }}
+  TF_VAR_oncall_phone: ${{ secrets.ONCALL_PHONE }}
+
+jobs:
+  terraform-plan-dev:
+    name: 'Terraform Plan - Dev'
+    runs-on: ubuntu-latest
+    environment: dev-plan
+    
+    defaults:
+      run:
+        working-directory: terraform/environments/dev
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+    
+    - name: Terraform Format
+      id: fmt
+      run: terraform fmt -check
+      continue-on-error: true
+    
+    - name: Terraform Init
+      id: init
+      run: |
+        terraform init \
+          -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_DEV }}" \
+          -backend-config="access_key=${{ secrets.TF_STATE_ACCESS_KEY_DEV }}"
+    
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+    
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color -out=dev.tfplan
+      continue-on-error: true
+    
+    - name: Update Pull Request
+      uses: actions/github-script@v6
+      if: github.event_name == 'pull_request'
+      env:
+        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+      with:
+        script: |
+          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+          #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+          #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+          #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+          
+          <details><summary>Show Plan</summary>
+          
+          \`\`\`\n
+          ${process.env.PLAN}
+          \`\`\`
+          
+          </details>
+          
+          *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
+    
+    - name: Upload Terraform Plan
+      uses: actions/upload-artifact@v3
+      with:
+        name: dev-tfplan
+        path: terraform/environments/dev/dev.tfplan

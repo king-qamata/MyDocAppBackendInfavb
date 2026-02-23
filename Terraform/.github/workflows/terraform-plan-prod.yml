@@ -1,0 +1,66 @@
+name: 'Terraform Plan - Prod'
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-plan-prod.yml'
+  workflow_dispatch:
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_PROD }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET_PROD }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_PROD }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID_PROD }}
+  TF_VAR_fcm_api_key: ${{ secrets.FCM_API_KEY_PROD }}
+  TF_VAR_paystack_secret_key: ${{ secrets.PAYSTACK_SECRET_KEY_PROD }}
+  TF_VAR_apns_key_id: ${{ secrets.APNS_KEY_ID_PROD }}
+  TF_VAR_apns_team_id: ${{ secrets.APNS_TEAM_ID_PROD }}
+  TF_VAR_apns_token: ${{ secrets.APNS_TOKEN_PROD }}
+  TF_VAR_admin_email: ${{ secrets.ADMIN_EMAIL }}
+  TF_VAR_oncall_phone: ${{ secrets.ONCALL_PHONE }}
+  TF_VAR_terraform_sp_object_id: ${{ secrets.TERRAFORM_SP_OBJECT_ID_PROD }}
+  TF_VAR_allowed_ip_addresses: ${{ secrets.ALLOWED_IP_ADDRESSES }}
+  TF_VAR_redis_backup_storage_connection: ${{ secrets.REDIS_BACKUP_STORAGE_CONNECTION_PROD }}
+
+jobs:
+  terraform-plan-prod:
+    name: 'Terraform Plan - Prod'
+    runs-on: ubuntu-latest
+    environment: prod-plan
+    
+    defaults:
+      run:
+        working-directory: terraform/environments/prod
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+    
+    - name: Terraform Init
+      id: init
+      run: |
+        terraform init \
+          -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_PROD }}" \
+          -backend-config="access_key=${{ secrets.TF_STATE_ACCESS_KEY_PROD }}"
+    
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+    
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color -out=prod.tfplan
+      continue-on-error: true
+    
+    - name: Upload Terraform Plan
+      uses: actions/upload-artifact@v3
+      with:
+        name: prod-tfplan
+        path: terraform/environments/prod/prod.tfplan

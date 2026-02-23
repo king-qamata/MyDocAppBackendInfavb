@@ -1,0 +1,63 @@
+name: 'Terraform Apply - Dev'
+
+on:
+  push:
+    branches: [ develop ]
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID_DEV }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET_DEV }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID_DEV }}
+  TF_VAR_fcm_api_key: ${{ secrets.FCM_API_KEY_DEV }}
+  TF_VAR_paystack_secret_key: ${{ secrets.PAYSTACK_SECRET_KEY_DEV }}
+  TF_VAR_apns_key_id: ${{ secrets.APNS_KEY_ID_DEV }}
+  TF_VAR_apns_team_id: ${{ secrets.APNS_TEAM_ID_DEV }}
+  TF_VAR_apns_token: ${{ secrets.APNS_TOKEN_DEV }}
+  TF_VAR_admin_email: ${{ secrets.ADMIN_EMAIL }}
+  TF_VAR_oncall_phone: ${{ secrets.ONCALL_PHONE }}
+
+jobs:
+  terraform-apply-dev:
+    name: 'Terraform Apply - Dev'
+    runs-on: ubuntu-latest
+    environment: 
+      name: dev
+      url: https://app-mydoc-api-dev.azurewebsites.net
+    
+    defaults:
+      run:
+        working-directory: terraform/environments/dev
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+    
+    - name: Terraform Init
+      id: init
+      run: |
+        terraform init \
+          -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_DEV }}" \
+          -backend-config="access_key=${{ secrets.TF_STATE_ACCESS_KEY_DEV }}"
+    
+    - name: Terraform Apply
+      id: apply
+      run: terraform apply -auto-approve
+    
+    - name: Output Terraform State
+      id: output
+      run: terraform output -json > ../../outputs/dev-output.json
+    
+    - name: Upload Outputs
+      uses: actions/upload-artifact@v3
+      with:
+        name: dev-outputs
+        path: outputs/dev-output.json

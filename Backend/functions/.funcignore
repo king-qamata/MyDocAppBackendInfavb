@@ -1,0 +1,6 @@
+node_modules/
+dist/**/*.map
+.git/
+.gitignore
+local.settings.json
+*.md
