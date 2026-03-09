@@ -16,7 +16,7 @@ resource "azurerm_service_plan" "functions" {
   resource_group_name = var.resource_group_name
   location            = var.location
   os_type             = "Linux"
-  sku_name            = var.environment == "prod" ? "EP1" : "Y1"
+  sku_name            = var.environment == "prod" ? "EP1" : "B1"
 
   tags = var.tags
 }
@@ -30,8 +30,8 @@ resource "azurerm_linux_function_app" "this" {
   storage_account_name       = azurerm_storage_account.functions.name
   storage_account_access_key = azurerm_storage_account.functions.primary_access_key
 
-  https_only                 = true
-  virtual_network_subnet_id  = var.app_subnet_id
+  https_only                = true
+  virtual_network_subnet_id = var.app_subnet_id
 
   functions_extension_version = "~4"
 
@@ -44,8 +44,8 @@ resource "azurerm_linux_function_app" "this" {
       node_version = "20"
     }
 
-    ftps_state         = "Disabled"
-    minimum_tls_version = "1.2"
+    ftps_state                             = "Disabled"
+    minimum_tls_version                    = "1.2"
     application_insights_connection_string = var.app_insights_connection_string
   }
 

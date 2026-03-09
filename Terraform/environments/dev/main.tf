@@ -26,6 +26,8 @@ terraform {
 }
 
 provider "azurerm" {
+  storage_use_azuread = true
+
   features {
     key_vault {
       purge_soft_delete_on_destroy    = true
@@ -111,7 +113,7 @@ module "database" {
   db_configurations = {
     "azure.extensions" = "CITEXT,PG_CRON,UUID-OSSP"
     "max_connections"  = "100"
-    "shared_buffers"   = "512MB"
+    "shared_buffers"   = "65536"
   }
 }
 

@@ -26,6 +26,8 @@ terraform {
 }
 
 provider "azurerm" {
+  storage_use_azuread = true
+
   features {
     key_vault {
       purge_soft_delete_on_destroy    = false
@@ -109,7 +111,7 @@ module "database" {
   db_configurations = {
     "azure.extensions"      = "CITEXT,PG_CRON,UUID-OSSP,POSTGIS"
     "max_connections"       = "500"
-    "shared_buffers"        = "2048MB"
+    "shared_buffers"        = "262144"
     "work_mem"              = "20MB"
     "maintenance_work_mem"  = "1GB"
     "effective_cache_size"  = "6GB"

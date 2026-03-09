@@ -18,6 +18,16 @@ resource "azurerm_subnet" "app_service" {
   resource_group_name  = azurerm_resource_group.this.name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = [var.app_subnet_prefix]
+
+  delegation {
+    name = "appservice-delegation"
+    service_delegation {
+      name = "Microsoft.Web/serverFarms"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/action",
+      ]
+    }
+  }
 }
 
 resource "azurerm_subnet" "database" {
@@ -25,11 +35,11 @@ resource "azurerm_subnet" "database" {
   resource_group_name  = azurerm_resource_group.this.name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = [var.db_subnet_prefix]
-  
+
   delegation {
     name = "fs-delegation"
     service_delegation {
-      name = "Microsoft.DBforPostgreSQL/flexibleServers"
+      name    = "Microsoft.DBforPostgreSQL/flexibleServers"
       actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
     }
   }
