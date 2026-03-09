@@ -9,10 +9,10 @@ output "webpubsub_connection_string" {
 }
 
 output "notification_hub_connection" {
-  value     = try(jsondecode(data.azapi_resource_action.notification_hub_namespace_keys.output).primaryConnectionString, "")
+  value     = var.environment == "prod" ? azurerm_notification_hub_authorization_rule.terraform[0].primary_connection_string : ""
   sensitive = true
 }
 
 output "notification_hub_name" {
-  value = azurerm_notification_hub.fcm.name
+  value = var.environment == "prod" ? azurerm_notification_hub.fcm[0].name : ""
 }

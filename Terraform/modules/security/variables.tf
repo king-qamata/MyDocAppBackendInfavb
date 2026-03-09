@@ -27,3 +27,8 @@ variable "allowed_ip_rules" {
   type    = list(string)
   default = []
 }
+
+variable "enable_b2c_tenant" {
+  type    = bool
+  default = false
+}
