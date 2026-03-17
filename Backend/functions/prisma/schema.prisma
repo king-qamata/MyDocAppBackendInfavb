@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
@@ -51,17 +52,17 @@ model User {
   passwordHash      String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  
+
   // Biometric references (not actual data)
   facePersonId      String?   // Azure Face API Person ID
   voiceProfileId    String?   // Azure Speaker Recognition Profile ID
-  
+
   // Relations
   patientProfile    PatientProfile?
   doctorProfile     DoctorProfile?
   wallet            Wallet?
   refreshTokens     RefreshToken[]
-  
+
   // Security
   mfaEnabled        Boolean   @default(false)
   lastLoginAt       DateTime?
@@ -85,32 +86,32 @@ model DoctorProfile {
   id                    String        @id @default(cuid())
   userId                String        @unique
   user                  User          @relation(fields: [userId], references: [id])
-  
+
   // Professional
   mdcnNumber            String        @unique
   specialization        String
   yearsOfExperience     Int
   verifiedAt            DateTime
-  
+
   // Capabilities
   currentTier           DoctorTier    @default(VOICE_TEXT_ONLY)
   canHandleVoiceText    Boolean       @default(true)
   canHandleVoiceCall    Boolean       @default(false)
   canHandleVideoCall    Boolean       @default(false)
-  
+
   // Device verification
   deviceVerifiedAt      DateTime?
   videoQualityPassed    Boolean       @default(false)
-  
+
   // Availability
   isOnline              Boolean       @default(false)
   lastSeenAt            DateTime?
-  
+
   // Stats
   totalConsultations    Int           @default(0)
   averageRating         Float         @default(0.0)
   acceptanceRate        Float         @default(0.0)
-  
+
   // Relations
   consultations         Consultation[]
 }
@@ -119,17 +120,17 @@ model PatientProfile {
   id                String        @id @default(cuid())
   userId            String        @unique
   user              User          @relation(fields: [userId], references: [id])
-  
+
   // Medical
   dateOfBirth       DateTime
   bloodGroup        String?
   allergies         String[]
   chronicConditions String[]
-  
+
   // Emergency contact
   emergencyName     String?
   emergencyPhone    String?
-  
+
   // Relations
   consultations     Consultation[]
 }
@@ -138,13 +139,13 @@ model Consultation {
   id                String              @id @default(cuid())
   tier              ConsultationTier
   status            ConsultationStatus  @default(REQUESTED)
-  
+
   // Participants
   patientId         String
   patient           PatientProfile      @relation(fields: [patientId], references: [id])
   doctorId          String?
   doctor            DoctorProfile?      @relation(fields: [doctorId], references: [id])
-  
+
   // Timing
   requestedAt       DateTime            @default(now())
   acceptedAt        DateTime?
@@ -153,30 +154,30 @@ model Consultation {
   expiryTime        DateTime            // 2 minutes from request
   expiryNotifiedAt  DateTime?
   livenessRequestedAt DateTime?
-  
+
   // Media (ACS references)
   acsCallId         String?             // For Priority/Super
   acsChatThreadId   String?             // For Normal tier
   recordingUrl      String?             // S3/Blob URL
-  
+
   // Clinical
   symptomsVoiceNote String?             // URL to audio file
   diagnosis         String?
   prescription      String?
-  
+
   // Financial
   price             Float               // ₦1,000, ₦5,000, or ₦10,000
   paymentStatus     PaymentStatus       @default(HELD)
   paymentReference  String?
-  
+
   // Metadata
   durationSeconds   Int?
   deviceInfo        Json?               // Patient's device at request time
   networkQuality    String?             // "2G", "3G", "4G"
-  
+
   // Relations
   transactions      Transaction[]
-  
+
   @@index([patientId])
   @@index([doctorId])
   @@index([status])
@@ -191,14 +192,14 @@ model Wallet {
   balance           Float         @default(0.0)
   currency          String        @default("NGN")
   metadata          Json?
-  
+
   // Limits
   dailyWithdrawalLimit Float     @default(100000) // ₦100,000
   lastWithdrawalAt  DateTime?
-  
+
   // Relations
   transactions      Transaction[]
-  
+
   @@index([userId])
 }
 
@@ -206,24 +207,24 @@ model Transaction {
   id                String        @id @default(cuid())
   walletId          String
   wallet            Wallet        @relation(fields: [walletId], references: [id])
-  
+
   type              String        // "CREDIT", "DEBIT", "HOLD", "RELEASE"
   amount            Float
   currency          String        @default("NGN")
-  
+
   status            String        @default("PENDING")
   reference         String        @unique
-  
+
   // Links
   consultationId    String?
   consultation      Consultation? @relation(fields: [consultationId], references: [id])
-  
+
   // Metadata
   description       String?
   metadata          Json?
-  
+
   createdAt         DateTime      @default(now())
-  
+
   @@index([walletId])
   @@index([reference])
   @@index([consultationId])
@@ -239,7 +240,7 @@ model AuditLog {
   ipAddress         String?
   userAgent         String?
   createdAt         DateTime      @default(now())
-  
+
   @@index([userId])
   @@index([action])
   @@index([createdAt])

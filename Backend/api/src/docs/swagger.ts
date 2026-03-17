@@ -17,6 +17,7 @@ const options: swaggerJsdoc.Options = {
     ],
     tags: [
       { name: 'Health', description: 'Service health and metrics' },
+      { name: 'Auth', description: 'Authentication and bootstrap' },
       { name: 'Consultations', description: 'Consultation lifecycle endpoints' },
       { name: 'Payments', description: 'Payment webhooks and processing' },
       { name: 'Webhooks', description: 'External provider callbacks' },

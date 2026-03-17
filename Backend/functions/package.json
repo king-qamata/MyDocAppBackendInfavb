@@ -7,10 +7,12 @@
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist",
     "start": "func start",
-    "start:dist": "node dist/src/index.js"
+    "start:dist": "node dist/src/index.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@azure/functions": "^4.5.0",
+    "@azure/notification-hubs": "^1.2.3",
     "@azure/storage-blob": "^12.26.0",
     "@prisma/client": "^5.22.0",
     "axios": "^1.8.1"

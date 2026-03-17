@@ -3,6 +3,7 @@ import { ConsultationController } from '../controllers/consultation.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { rateLimiter } from '../middleware/rate-limit.middleware';
 import { asyncHandler } from '../middleware/async-handler';
+import { requireRole } from '../middleware/role.middleware';
 
 const router = Router();
 const consultationController = new ConsultationController();
@@ -45,7 +46,12 @@ router.use(authMiddleware.authenticate);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/request', rateLimiter.consultationRequest(), asyncHandler((req, res) => consultationController.requestConsultation(req, res)));
+router.post(
+  '/request',
+  requireRole('PATIENT'),
+  rateLimiter.consultationRequest(),
+  asyncHandler((req, res) => consultationController.requestConsultation(req, res))
+);
 /**
  * @openapi
  * /api/v1/consultations/accept:
@@ -94,7 +100,11 @@ router.post('/request', rateLimiter.consultationRequest(), asyncHandler((req, re
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/accept', asyncHandler((req, res) => consultationController.acceptConsultation(req, res)));
+router.post(
+  '/accept',
+  requireRole('DOCTOR'),
+  asyncHandler((req, res) => consultationController.acceptConsultation(req, res))
+);
 
 /**
  * @openapi
@@ -120,7 +130,11 @@ router.post('/accept', asyncHandler((req, res) => consultationController.acceptC
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/patient/history', asyncHandler((req, res) => consultationController.getPatientHistory(req, res)));
+router.get(
+  '/patient/history',
+  requireRole('PATIENT'),
+  asyncHandler((req, res) => consultationController.getPatientHistory(req, res))
+);
 
 /**
  * @openapi
@@ -146,7 +160,11 @@ router.get('/patient/history', asyncHandler((req, res) => consultationController
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/doctor/schedule', asyncHandler((req, res) => consultationController.getDoctorSchedule(req, res)));
+router.get(
+  '/doctor/schedule',
+  requireRole('DOCTOR'),
+  asyncHandler((req, res) => consultationController.getDoctorSchedule(req, res))
+);
 
 /**
  * @openapi
@@ -234,7 +252,11 @@ router.post('/:consultationId/start', asyncHandler((req, res) => consultationCon
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/:consultationId/complete', asyncHandler((req, res) => consultationController.completeConsultation(req, res)));
+router.post(
+  '/:consultationId/complete',
+  requireRole('DOCTOR'),
+  asyncHandler((req, res) => consultationController.completeConsultation(req, res))
+);
 
 /**
  * @openapi
@@ -278,7 +300,11 @@ router.post('/:consultationId/complete', asyncHandler((req, res) => consultation
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/:consultationId/rate', asyncHandler((req, res) => consultationController.rateDoctor(req, res)));
+router.post(
+  '/:consultationId/rate',
+  requireRole('PATIENT'),
+  asyncHandler((req, res) => consultationController.rateDoctor(req, res))
+);
 
 /**
  * @openapi
@@ -328,7 +354,11 @@ router.post('/:consultationId/rate', asyncHandler((req, res) => consultationCont
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/:consultationId/escalate', asyncHandler((req, res) => consultationController.escalateTier(req, res)));
+router.post(
+  '/:consultationId/escalate',
+  requireRole('PATIENT'),
+  asyncHandler((req, res) => consultationController.escalateTier(req, res))
+);
 
 /**
  * @openapi

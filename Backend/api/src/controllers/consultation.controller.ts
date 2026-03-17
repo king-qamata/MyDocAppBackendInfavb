@@ -453,7 +453,7 @@ export class ConsultationController {
 
     await prisma.consultation.update({
       where: { id: consultationId },
-      data: { status: ConsultationStatus.EXPIRED }
+      data: { status: ConsultationStatus.EXPIRED, expiryNotifiedAt: new Date() }
     });
 
     if (consultation.paymentReference) {
@@ -519,9 +519,24 @@ export class ConsultationController {
 
   private scheduleLivenessCheck(consultationId: string, doctorId: string) {
     setTimeout(() => {
-      notificationService.requestLivenessCheck({ consultationId, doctorId }).catch((error) => {
-        monitoring.trackException({ exception: error, properties: { operation: 'scheduleLivenessCheck' } });
-      });
+      prisma
+        .consultation
+        .findUnique({ where: { id: consultationId } })
+        .then((consultation) => {
+          if (!consultation) return;
+          if (consultation.status !== ConsultationStatus.IN_PROGRESS) return;
+          if (consultation.tier !== ConsultationTier.SUPER) return;
+          if (consultation.livenessRequestedAt) return;
+
+          return prisma.consultation.update({
+            where: { id: consultationId },
+            data: { livenessRequestedAt: new Date() }
+          });
+        })
+        .then(() => notificationService.requestLivenessCheck({ consultationId, doctorId }))
+        .catch((error) => {
+          monitoring.trackException({ exception: error, properties: { operation: 'scheduleLivenessCheck' } });
+        });
     }, 2 * 60 * 1000);
   }
 }

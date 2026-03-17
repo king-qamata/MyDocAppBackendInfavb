@@ -140,6 +140,11 @@ Set in `Backend/api/.env` (or App Service settings in Azure):
 - `APPINSIGHTS_INSTRUMENTATIONKEY` (or `APPLICATIONINSIGHTS_CONNECTION_STRING`)
 - `PAYSTACK_SECRET_KEY`, `FLUTTERWAVE_SECRET_KEY`
 - `JWT_SECRET`
+- `JWT_ISSUER`, `JWT_AUDIENCE`
+- `ACCESS_TOKEN_TTL_MINUTES`, `REFRESH_TOKEN_TTL_DAYS`, `REFRESH_TOKEN_SECRET`
+- `FLUTTERWAVE_WEBHOOK_HASH`
+- `ACS_WEBHOOK_ALLOWED_TYPES` (optional)
+- `DEV_BOOTSTRAP_KEY` (dev-only)
 
 Function runtime environment variables:
 
@@ -150,6 +155,9 @@ Function runtime environment variables:
 - `FLUTTERWAVE_SECRET_KEY` (optional)
 - `PAYMENT_PROCESSOR_SCHEDULE`
 - `COMPLIANCE_CLEANUP_SCHEDULE`
+- `NOTIFICATION_ORCHESTRATOR_SCHEDULE`
+- `NOTIFICATION_HUB_CONNECTION_STRING`
+- `NOTIFICATION_HUB_NAME`
 
 ## 6. Infrastructure Workflow
 
@@ -183,6 +191,9 @@ Function deployment workflows:
 - App Service integration expects secrets to be supplied through Terraform variables/CI secrets.
 - Recommendation: keep sensitive values in Key Vault and inject through managed identity where possible.
 - Current payout job limitation: function payout flow requires a formal bank-details model in DB.
+- Password-based auth endpoints added for patient/doctor registration and login (see `/api/v1/auth/*`).
+- Refresh tokens added with rotation: `/api/v1/auth/refresh` revokes the old token and issues a new one. Use `/api/v1/auth/logout` to revoke a token.
+- New migration SQL lives under `Backend/api/prisma/migrations/20260317_auth_orchestration/migration.sql`.
 
 ## 8. Key Files
 

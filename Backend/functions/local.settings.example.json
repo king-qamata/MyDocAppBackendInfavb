@@ -8,6 +8,9 @@
     "PAYSTACK_SECRET_KEY": "sk_test_xxx",
     "FLUTTERWAVE_SECRET_KEY": "flw_test_xxx",
     "PAYMENT_PROCESSOR_SCHEDULE": "0 */5 * * * *",
-    "COMPLIANCE_CLEANUP_SCHEDULE": "0 0 2 * * *"
+    "COMPLIANCE_CLEANUP_SCHEDULE": "0 0 2 * * *",
+    "NOTIFICATION_ORCHESTRATOR_SCHEDULE": "0 */1 * * * *",
+    "NOTIFICATION_HUB_CONNECTION_STRING": "Endpoint=sb://...;SharedAccessKeyName=...;SharedAccessKey=...;EntityPath=...",
+    "NOTIFICATION_HUB_NAME": "mydoc-notifications"
   }
 }

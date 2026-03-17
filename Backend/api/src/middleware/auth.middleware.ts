@@ -8,6 +8,7 @@ declare global {
         id: string;
         role?: string;
       };
+      rawBody?: Buffer;
     }
   }
 }
@@ -30,7 +31,12 @@ export const authMiddleware = {
     const token = authHeader.substring(7);
 
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as {
+      const options: jwt.VerifyOptions = {
+        issuer: process.env.JWT_ISSUER || undefined,
+        audience: process.env.JWT_AUDIENCE || undefined
+      };
+
+      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret', options) as {
         sub?: string;
         id?: string;
         role?: string;

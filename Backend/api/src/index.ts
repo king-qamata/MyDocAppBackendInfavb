@@ -17,6 +17,7 @@ import patientRoutes from './routes/patient.routes';
 import paymentRoutes from './routes/payment.routes';
 import webhookRoutes from './routes/webhook.routes';
 import healthRoutes from './routes/health.routes';
+import authRoutes from './routes/auth.routes';
 
 dotenv.config();
 
@@ -44,7 +45,14 @@ app.use(
 );
 
 app.use(compression());
-app.use(express.json({ limit: '50mb' }));
+app.use(
+  express.json({
+    limit: '50mb',
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    }
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(monitoring.trackRequest());
 
@@ -80,6 +88,7 @@ app.get('/health', async (_req, res, next) => {
  *               $ref: '#/components/schemas/HealthResponse'
  */
 app.use('/api/v1/consultations', consultationRoutes);
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/doctors', doctorRoutes);
 app.use('/api/v1/patients', patientRoutes);
 app.use('/api/v1/payments', paymentRoutes);

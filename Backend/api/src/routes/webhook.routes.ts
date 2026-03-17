@@ -1,7 +1,15 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { acsService } from '../services/acs.service';
 
 const router = Router();
+
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 /**
  * @openapi
@@ -37,11 +45,31 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
 */
-router.post('/acs', async (req, res, next) => {
+router.post('/acs', webhookLimiter, async (req, res, next) => {
   try {
     const events = Array.isArray(req.body) ? req.body : [req.body];
-    await Promise.all(events.map((event) => acsService.handleCallback(event)));
-    res.status(200).json({ processed: events.length });
+
+    const aegEventType = String(req.headers['aeg-event-type'] || '');
+    if (aegEventType === 'SubscriptionValidation') {
+      const validationCode = events?.[0]?.data?.validationCode;
+      return res.status(200).json({ validationResponse: validationCode });
+    }
+
+    const allowedTypes = (process.env.ACS_WEBHOOK_ALLOWED_TYPES || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    const filtered = allowedTypes.length
+      ? events.filter((event) => allowedTypes.includes(String(event?.type || '')))
+      : events;
+
+    if (filtered.length === 0) {
+      return res.status(202).json({ processed: 0 });
+    }
+
+    await Promise.all(filtered.map((event) => acsService.handleCallback(event)));
+    res.status(200).json({ processed: filtered.length });
   } catch (error) {
     next(error);
   }
