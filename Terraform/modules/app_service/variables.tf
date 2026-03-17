@@ -43,3 +43,8 @@ variable "app_settings" {
   type    = map(string)
   default = {}
 }
+
+variable "zip_deploy_file" {
+  type    = string
+  default = null
+}

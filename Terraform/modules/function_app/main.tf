@@ -28,7 +28,9 @@ resource "azurerm_linux_function_app" "this" {
   service_plan_id     = azurerm_service_plan.functions.id
 
   storage_account_name       = azurerm_storage_account.functions.name
-  storage_account_access_key = azurerm_storage_account.functions.primary_access_key
+  storage_account_access_key = var.storage_use_managed_identity ? null : azurerm_storage_account.functions.primary_access_key
+  storage_uses_managed_identity = var.storage_use_managed_identity
+  zip_deploy_file            = var.zip_deploy_file
 
   https_only                = true
   virtual_network_subnet_id = var.app_subnet_id
@@ -49,7 +51,13 @@ resource "azurerm_linux_function_app" "this" {
     application_insights_connection_string = var.app_insights_connection_string
   }
 
-  app_settings = merge(var.function_app_settings, {
+  app_settings = merge(
+    var.function_app_settings,
+    var.storage_use_managed_identity ? {
+      "AzureWebJobsStorage__accountName" = azurerm_storage_account.functions.name
+      "AzureWebJobsStorage__credential"  = "managedidentity"
+    } : {},
+    {
     "FUNCTIONS_WORKER_RUNTIME"              = "node"
     "WEBSITE_RUN_FROM_PACKAGE"              = "1"
     "SCM_DO_BUILD_DURING_DEPLOYMENT"        = "true"
@@ -63,4 +71,18 @@ resource "azurerm_linux_function_app" "this" {
   })
 
   tags = var.tags
+}
+
+resource "azurerm_role_assignment" "functions_storage_blob" {
+  count                = var.storage_use_managed_identity && var.storage_assign_roles ? 1 : 0
+  scope                = azurerm_storage_account.functions.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = azurerm_linux_function_app.this.identity[0].principal_id
+}
+
+resource "azurerm_role_assignment" "functions_storage_queue" {
+  count                = var.storage_use_managed_identity && var.storage_assign_roles ? 1 : 0
+  scope                = azurerm_storage_account.functions.id
+  role_definition_name = "Storage Queue Data Contributor"
+  principal_id         = azurerm_linux_function_app.this.identity[0].principal_id
 }

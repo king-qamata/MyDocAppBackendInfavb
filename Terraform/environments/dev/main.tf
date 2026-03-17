@@ -213,6 +213,8 @@ module "app_service" {
     "MAX_CONCURRENT_SUPER"    = "1"
     "COMMISSION_RATE"         = "0.20"
   }
+
+  zip_deploy_file = "../../../artifacts/api.zip"
 }
 
 # Function App module
@@ -241,6 +243,11 @@ module "function_app" {
     "PAYMENT_PROCESSOR_SCHEDULE"  = "0 */5 * * * *"
     "COMPLIANCE_CLEANUP_SCHEDULE" = "0 0 2 * * *"
   }
+
+  storage_use_managed_identity = true
+  storage_assign_roles         = true
+
+  zip_deploy_file = "../../../artifacts/functions.zip"
 }
 
 # Monitoring module

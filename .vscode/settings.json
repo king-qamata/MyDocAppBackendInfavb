@@ -1,0 +1,12 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/23ab8aeb-371b-4a84-ba2b-45622eb7e9dc/resourceGroups/rg-mydoc-dev-weu/providers/Microsoft.Web/sites/app-mydoc-api-dev",
+    "appService.deploySubpath": "Backend/api",
+    "azureFunctions.deploySubpath": "Backend/functions",
+    "azureFunctions.postDeployTask": "npm install (functions)",
+    "azureFunctions.projectLanguage": "TypeScript",
+    "azureFunctions.projectRuntime": "~4",
+    "debug.internalConsoleOptions": "neverOpen",
+    "azureFunctions.projectLanguageModel": 4,
+    "azureFunctions.projectSubpath": "Backend/functions",
+    "azureFunctions.preDeployTask": "npm prune (functions)"
+}

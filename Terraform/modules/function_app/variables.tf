@@ -37,3 +37,18 @@ variable "function_app_settings" {
   type    = map(string)
   default = {}
 }
+
+variable "zip_deploy_file" {
+  type    = string
+  default = null
+}
+
+variable "storage_use_managed_identity" {
+  type    = bool
+  default = true
+}
+
+variable "storage_assign_roles" {
+  type    = bool
+  default = true
+}
