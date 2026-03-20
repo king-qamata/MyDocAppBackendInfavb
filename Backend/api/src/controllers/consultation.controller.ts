@@ -96,7 +96,6 @@ export class ConsultationController {
       });
 
       await this.notifyEligibleDoctors(consultation.id);
-      this.scheduleExpiryHandler(consultation.id);
 
       monitoring.trackEvent('ConsultationRequested', {
         consultationId: consultation.id,
@@ -250,10 +249,6 @@ export class ConsultationController {
           startedAt: new Date()
         }
       });
-
-      if (consultation.tier === ConsultationTier.SUPER && consultation.doctorId) {
-        this.scheduleLivenessCheck(consultationId, consultation.doctorId);
-      }
     }
 
     res.status(200).json({ message: 'Consultation started', status: ConsultationStatus.IN_PROGRESS });
@@ -447,34 +442,6 @@ export class ConsultationController {
     res.status(200).json({ consultations });
   }
 
-  async handleExpiredRequest(consultationId: string) {
-    const consultation = await prisma.consultation.findUnique({ where: { id: consultationId } });
-    if (!consultation || consultation.status !== ConsultationStatus.REQUESTED) return;
-
-    await prisma.consultation.update({
-      where: { id: consultationId },
-      data: { status: ConsultationStatus.EXPIRED, expiryNotifiedAt: new Date() }
-    });
-
-    if (consultation.paymentReference) {
-      await paymentService.releaseHold(consultation.paymentReference);
-    }
-
-    const patient = await prisma.patientProfile.findUnique({
-      where: { id: consultation.patientId },
-      select: { userId: true }
-    });
-
-    if (patient) {
-      await notificationService.notifyRequestExpired({
-        patientId: patient.userId,
-        consultationId
-      });
-    }
-
-    monitoring.trackEvent('ConsultationExpired', { consultationId });
-  }
-
   private isDoctorEligibleForTier(doctor: any, tier: ConsultationTier): boolean {
     if (tier === ConsultationTier.SUPER) return !!doctor.canHandleVideoCall;
     if (tier === ConsultationTier.PRIORITY) return !!doctor.canHandleVoiceCall;
@@ -507,36 +474,5 @@ export class ConsultationController {
         tier: consultation.tier
       }
     });
-  }
-
-  private scheduleExpiryHandler(consultationId: string) {
-    setTimeout(() => {
-      this.handleExpiredRequest(consultationId).catch((error) => {
-        monitoring.trackException({ exception: error, properties: { operation: 'scheduleExpiryHandler' } });
-      });
-    }, 2 * 60 * 1000);
-  }
-
-  private scheduleLivenessCheck(consultationId: string, doctorId: string) {
-    setTimeout(() => {
-      prisma
-        .consultation
-        .findUnique({ where: { id: consultationId } })
-        .then((consultation) => {
-          if (!consultation) return;
-          if (consultation.status !== ConsultationStatus.IN_PROGRESS) return;
-          if (consultation.tier !== ConsultationTier.SUPER) return;
-          if (consultation.livenessRequestedAt) return;
-
-          return prisma.consultation.update({
-            where: { id: consultationId },
-            data: { livenessRequestedAt: new Date() }
-          });
-        })
-        .then(() => notificationService.requestLivenessCheck({ consultationId, doctorId }))
-        .catch((error) => {
-          monitoring.trackException({ exception: error, properties: { operation: 'scheduleLivenessCheck' } });
-        });
-    }, 2 * 60 * 1000);
   }
 }

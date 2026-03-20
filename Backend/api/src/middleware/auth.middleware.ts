@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../lib/prisma';
 
 declare global {
   namespace Express {
@@ -7,6 +8,7 @@ declare global {
       user?: {
         id: string;
         role?: string;
+        tokenVersion?: number;
       };
       rawBody?: Buffer;
     }
@@ -14,7 +16,7 @@ declare global {
 }
 
 export const authMiddleware = {
-  authenticate(req: Request, res: Response, next: NextFunction) {
+  async authenticate(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader?.startsWith('Bearer ')) {
@@ -40,11 +42,27 @@ export const authMiddleware = {
         sub?: string;
         id?: string;
         role?: string;
+        tv?: number;
       };
 
+      const userId = payload.sub || payload.id || 'unknown';
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true, tokenVersion: true, isActive: true }
+      });
+
+      if (!user || !user.isActive) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      if ((payload.tv ?? 0) !== user.tokenVersion) {
+        return res.status(401).json({ error: 'Token has been revoked' });
+      }
+
       req.user = {
-        id: payload.sub || payload.id || 'unknown',
-        role: payload.role
+        id: user.id,
+        role: payload.role || user.role,
+        tokenVersion: user.tokenVersion
       };
 
       return next();

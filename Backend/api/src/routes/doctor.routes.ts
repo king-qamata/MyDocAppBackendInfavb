@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { AppError } from '../middleware/error.middleware';
@@ -61,6 +62,14 @@ const doctorPresenceSchema = z.object({
   canHandleVideoCall: z.boolean().optional()
 });
 
+function getWalletMetadataObject(metadata: Prisma.JsonValue | null | undefined): Record<string, unknown> {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return {};
+  }
+
+  return metadata as Record<string, unknown>;
+}
+
 /**
  * @openapi
  * /api/v1/doctors/wallet/bank-details:
@@ -69,26 +78,21 @@ const doctorPresenceSchema = z.object({
  *     tags:
  *       - Doctors
  *     summary: Update doctor payout bank details
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - accountName
- *               - accountNumber
- *               - bankCode
- *             properties:
- *               accountName:
- *                 type: string
- *               accountNumber:
- *                 type: string
- *               bankCode:
- *                 type: string
+ *             $ref: '#/components/schemas/BankDetailsInput'
  *     responses:
  *       200:
  *         description: Bank details updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/WalletUpdateResponse'
  *       401:
  *         description: Unauthenticated
  *       404:
@@ -105,19 +109,20 @@ router.post('/wallet/bank-details', async (req, res, next) => {
     const input = bankDetailsSchema.parse(req.body);
 
     const existingWallet = await prisma.wallet.findUnique({ where: { userId } });
+    const existingMetadata = getWalletMetadataObject(existingWallet?.metadata);
 
     const wallet = await prisma.wallet.upsert({
       where: { userId },
       update: {
         metadata: {
-          ...(existingWallet?.metadata || {}),
+          ...existingMetadata,
           bankDetails: input
-        }
+        } as Prisma.InputJsonValue
       },
       create: {
         userId,
         balance: 0,
-        metadata: { bankDetails: input }
+        metadata: { bankDetails: input } as Prisma.InputJsonValue
       }
     });
 
@@ -138,9 +143,15 @@ router.post('/wallet/bank-details', async (req, res, next) => {
  *     tags:
  *       - Doctors
  *     summary: Get doctor wallet details
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Doctor wallet
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/WalletRecord'
  *       401:
  *         description: Unauthenticated
  *       404:
@@ -168,9 +179,15 @@ router.get('/wallet', async (req, res, next) => {
  *     tags:
  *       - Doctors
  *     summary: Get the authenticated doctor's profile
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Doctor profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/DoctorProfileRecord'
  *       401:
  *         description: Unauthenticated
  *       404:
@@ -198,34 +215,21 @@ router.get('/profile', async (req, res, next) => {
  *     tags:
  *       - Doctors
  *     summary: Create or update the authenticated doctor's profile
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - mdcnNumber
- *               - specialization
- *               - yearsOfExperience
- *             properties:
- *               mdcnNumber:
- *                 type: string
- *               specialization:
- *                 type: string
- *               yearsOfExperience:
- *                 type: integer
- *               verifiedAt:
- *                 type: string
- *               canHandleVoiceText:
- *                 type: boolean
- *               canHandleVoiceCall:
- *                 type: boolean
- *               canHandleVideoCall:
- *                 type: boolean
+ *             $ref: '#/components/schemas/DoctorProfileInput'
  *     responses:
  *       200:
  *         description: Doctor profile updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProfileUpdateResponse'
  *       401:
  *         description: Unauthenticated
  *       404:
@@ -282,22 +286,21 @@ router.post('/profile', async (req, res, next) => {
  *     tags:
  *       - Doctors
  *     summary: Mark doctor online for matching
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               canHandleVoiceText:
- *                 type: boolean
- *               canHandleVoiceCall:
- *                 type: boolean
- *               canHandleVideoCall:
- *                 type: boolean
+ *             $ref: '#/components/schemas/DoctorPresenceInput'
  *     responses:
  *       200:
  *         description: Doctor marked online
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GenericMessageResponse'
  *       401:
  *         description: Unauthenticated
  *       404:
@@ -337,9 +340,15 @@ router.post('/online', async (req, res, next) => {
  *     tags:
  *       - Doctors
  *     summary: Mark doctor offline for matching
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Doctor marked offline
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GenericMessageResponse'
  *       401:
  *         description: Unauthenticated
  */
@@ -366,9 +375,15 @@ router.post('/offline', async (req, res, next) => {
  *     tags:
  *       - Doctors
  *     summary: Update doctor presence heartbeat
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Heartbeat recorded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GenericMessageResponse'
  *       401:
  *         description: Unauthenticated
  */

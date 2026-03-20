@@ -55,9 +55,15 @@ const patientProfileSchema = z.object({
  *     tags:
  *       - Patients
  *     summary: Get the authenticated patient's profile
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Patient profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PatientProfileRecord'
  *       401:
  *         description: Unauthenticated
  *       404:
@@ -85,34 +91,21 @@ router.get('/profile', async (req, res, next) => {
  *     tags:
  *       - Patients
  *     summary: Create or update the authenticated patient's profile
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - dateOfBirth
- *             properties:
- *               dateOfBirth:
- *                 type: string
- *               bloodGroup:
- *                 type: string
- *               allergies:
- *                 type: array
- *                 items:
- *                   type: string
- *               chronicConditions:
- *                 type: array
- *                 items:
- *                   type: string
- *               emergencyName:
- *                 type: string
- *               emergencyPhone:
- *                 type: string
+ *             $ref: '#/components/schemas/PatientProfileInput'
  *     responses:
  *       200:
  *         description: Patient profile updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProfileUpdateResponse'
  *       401:
  *         description: Unauthenticated
  *       404:

@@ -6,7 +6,8 @@ ALTER TABLE "Wallet"
   ADD COLUMN IF NOT EXISTS "metadata" JSONB;
 
 ALTER TABLE "User"
-  ADD COLUMN IF NOT EXISTS "passwordHash" TEXT;
+  ADD COLUMN IF NOT EXISTS "passwordHash" TEXT,
+  ADD COLUMN IF NOT EXISTS "tokenVersion" INTEGER NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS "RefreshToken" (
   "id" TEXT PRIMARY KEY,
@@ -14,6 +15,8 @@ CREATE TABLE IF NOT EXISTS "RefreshToken" (
   "tokenHash" TEXT NOT NULL,
   "expiresAt" TIMESTAMP NOT NULL,
   "revokedAt" TIMESTAMP,
+  "ipAddress" TEXT,
+  "userAgent" TEXT,
   "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

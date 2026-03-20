@@ -102,7 +102,7 @@ Validation note:
 
 ### Backend prerequisites
 
-- Node.js 18+ (recommended: 20)
+- Node.js 20.15.0 via `nvm use` from the repository root
 - npm
 - PostgreSQL (or Azure Postgres)
 - Redis (or Azure Redis)
@@ -126,6 +126,128 @@ npm run build
 func start
 ```
 
+### Auth token usage
+
+The API uses signed bearer tokens implemented with `jsonwebtoken`. In practice these are compact JWS tokens signed with the shared secret configured in `JWT_SECRET`.
+
+Access token behavior:
+
+- Issued by `POST /api/v1/auth/dev-bootstrap`, `POST /api/v1/auth/register/patient`, `POST /api/v1/auth/register/doctor`, and `POST /api/v1/auth/login`
+- Sent to protected endpoints as `Authorization: Bearer <token>`
+- Include:
+  - `sub`: user id
+  - `role`: user role (`PATIENT`, `DOCTOR`, or `ADMIN`)
+  - `tv`: token version used for server-side revocation
+- Verified against:
+  - `JWT_SECRET`
+  - `JWT_ISSUER` when configured
+  - `JWT_AUDIENCE` when configured
+
+Refresh token behavior:
+
+- Returned together with access tokens by auth/login/register/bootstrap endpoints
+- Exchanged at `POST /api/v1/auth/refresh`
+- Revoked at `POST /api/v1/auth/logout`
+- Fully revoked for the current user at `POST /api/v1/auth/logout-all`
+- Rotated on refresh, with reuse detection and optional IP enforcement via `AUTH_STRICT_REFRESH_IP`
+
+Password/session revocation behavior:
+
+- `POST /api/v1/auth/change-password` updates the password hash and revokes active sessions
+- Access tokens are invalidated by incrementing the stored `tokenVersion`
+- Refresh tokens are stored hashed, not in plaintext, using `REFRESH_TOKEN_SECRET`
+
+Example authenticated request:
+
+```bash
+curl http://localhost:3000/api/v1/auth/me \
+  -H "Authorization: Bearer <access-token>"
+```
+
+### Swagger / OpenAPI docs
+
+The API publishes interactive Swagger UI and the raw OpenAPI document:
+
+- `GET /api-docs`
+- `GET /api-docs.json`
+
+The shared Swagger components in `Backend/api/src/docs/swagger.ts` now cover:
+
+- Auth request/response payloads for bootstrap, register, login, refresh, logout, logout-all, and change-password
+- User summary schema, bearer auth security scheme, and token response payloads
+- Doctor profile, presence, wallet, and bank-details payloads
+- Patient profile request/response payloads
+- Consultation response fields added for expiry and liveness orchestration metadata
+
+Swagger route annotations in `Backend/api/src/routes/auth.routes.ts`, `Backend/api/src/routes/doctor.routes.ts`, and `Backend/api/src/routes/patient.routes.ts` now reference these shared schemas so the UI stays aligned with the implemented endpoints.
+
+### Auth quickstart
+
+Register a patient:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/register/patient \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "patient@example.com",
+    "phoneNumber": "+2348000000001",
+    "password": "StrongPass123",
+    "dateOfBirth": "1995-06-15",
+    "bloodGroup": "O+"
+  }'
+```
+
+Login and receive an access token plus refresh token:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "patient@example.com",
+    "password": "StrongPass123"
+  }'
+```
+
+Use the access token against a protected route:
+
+```bash
+curl http://localhost:3000/api/v1/auth/me \
+  -H "Authorization: Bearer <access-token>"
+```
+
+Refresh the session:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "<refresh-token>"
+  }'
+```
+
+Revoke the current refresh token:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/logout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "<refresh-token>"
+  }'
+```
+
+Revoke all sessions for the authenticated user:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/logout-all \
+  -H "Authorization: Bearer <access-token>"
+```
+
+Open the interactive docs in a browser:
+
+```bash
+http://localhost:3000/api-docs
+```
+
 ### Minimal required environment variables
 
 Set in `Backend/api/.env` (or App Service settings in Azure):
@@ -142,6 +264,7 @@ Set in `Backend/api/.env` (or App Service settings in Azure):
 - `JWT_SECRET`
 - `JWT_ISSUER`, `JWT_AUDIENCE`
 - `ACCESS_TOKEN_TTL_MINUTES`, `REFRESH_TOKEN_TTL_DAYS`, `REFRESH_TOKEN_SECRET`
+- `AUTH_STRICT_REFRESH_IP`
 - `FLUTTERWAVE_WEBHOOK_HASH`
 - `ACS_WEBHOOK_ALLOWED_TYPES` (optional)
 - `DEV_BOOTSTRAP_KEY` (dev-only)
@@ -192,7 +315,9 @@ Function deployment workflows:
 - Recommendation: keep sensitive values in Key Vault and inject through managed identity where possible.
 - Current payout job limitation: function payout flow requires a formal bank-details model in DB.
 - Password-based auth endpoints added for patient/doctor registration and login (see `/api/v1/auth/*`).
-- Refresh tokens added with rotation: `/api/v1/auth/refresh` revokes the old token and issues a new one. Use `/api/v1/auth/logout` to revoke a token.
+- Refresh tokens added with rotation and reuse detection: `/api/v1/auth/refresh` revokes the old token and issues a new one. Use `/api/v1/auth/logout` to revoke a token or `/api/v1/auth/logout-all` to revoke all tokens for a user.
+- Access tokens now carry a token-version claim so password changes, logout-all, and refresh-token abuse can revoke existing sessions server-side once the Prisma client is regenerated.
+- Consultation expiry and delayed SUPER-tier liveness checks are now owned by the Azure Functions `notification-orchestrator`, not by in-process API timers.
 - New migration SQL lives under `Backend/api/prisma/migrations/20260317_auth_orchestration/migration.sql`.
 
 ## 8. Key Files

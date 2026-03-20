@@ -44,6 +44,259 @@ const options: swaggerJsdoc.Options = {
             details: { tier: ['Required'] }
           }
         },
+        UserRole: {
+          type: 'string',
+          enum: ['PATIENT', 'DOCTOR', 'ADMIN']
+        },
+        PaymentStatus: {
+          type: 'string',
+          enum: ['HELD', 'CAPTURED', 'RELEASED', 'REFUNDED', 'FAILED']
+        },
+        UserSummary: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            email: { type: 'string', format: 'email' },
+            phoneNumber: { type: 'string' },
+            role: { $ref: '#/components/schemas/UserRole' },
+            tokenVersion: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+            facePersonId: { type: 'string', nullable: true },
+            voiceProfileId: { type: 'string', nullable: true },
+            mfaEnabled: { type: 'boolean' },
+            lastLoginAt: { type: 'string', format: 'date-time', nullable: true },
+            isActive: { type: 'boolean' }
+          }
+        },
+        AuthTokens: {
+          type: 'object',
+          properties: {
+            token: { type: 'string' },
+            refreshToken: { type: 'string' },
+            refreshTokenExpiresAt: { type: 'string', format: 'date-time' }
+          },
+          required: ['token', 'refreshToken', 'refreshTokenExpiresAt']
+        },
+        AuthUserResponse: {
+          type: 'object',
+          properties: {
+            token: { type: 'string' },
+            refreshToken: { type: 'string' },
+            refreshTokenExpiresAt: { type: 'string', format: 'date-time' },
+            user: { $ref: '#/components/schemas/UserSummary' }
+          }
+        },
+        AuthTokenUserIdResponse: {
+          type: 'object',
+          properties: {
+            token: { type: 'string' },
+            refreshToken: { type: 'string' },
+            refreshTokenExpiresAt: { type: 'string', format: 'date-time' },
+            userId: { type: 'string' }
+          }
+        },
+        LoginResponse: {
+          type: 'object',
+          properties: {
+            token: { type: 'string' },
+            refreshToken: { type: 'string' },
+            refreshTokenExpiresAt: { type: 'string', format: 'date-time' },
+            userId: { type: 'string' },
+            role: { $ref: '#/components/schemas/UserRole' }
+          }
+        },
+        RefreshTokenInput: {
+          type: 'object',
+          required: ['refreshToken'],
+          properties: {
+            refreshToken: { type: 'string' }
+          }
+        },
+        ChangePasswordInput: {
+          type: 'object',
+          required: ['currentPassword', 'newPassword'],
+          properties: {
+            currentPassword: { type: 'string', minLength: 8 },
+            newPassword: { type: 'string', minLength: 8 }
+          }
+        },
+        RegisterPatientInput: {
+          type: 'object',
+          required: ['email', 'phoneNumber', 'password', 'dateOfBirth'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+            phoneNumber: { type: 'string' },
+            password: { type: 'string', minLength: 8 },
+            dateOfBirth: { type: 'string', format: 'date' },
+            bloodGroup: { type: 'string' },
+            allergies: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            chronicConditions: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            emergencyName: { type: 'string' },
+            emergencyPhone: { type: 'string' }
+          }
+        },
+        RegisterDoctorInput: {
+          type: 'object',
+          required: ['email', 'phoneNumber', 'password', 'mdcnNumber', 'specialization', 'yearsOfExperience'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+            phoneNumber: { type: 'string' },
+            password: { type: 'string', minLength: 8 },
+            mdcnNumber: { type: 'string' },
+            specialization: { type: 'string' },
+            yearsOfExperience: { type: 'integer' },
+            verifiedAt: { type: 'string', format: 'date-time' },
+            canHandleVoiceText: { type: 'boolean' },
+            canHandleVoiceCall: { type: 'boolean' },
+            canHandleVideoCall: { type: 'boolean' }
+          }
+        },
+        LoginInput: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+            password: { type: 'string', minLength: 8 }
+          }
+        },
+        DevBootstrapInput: {
+          type: 'object',
+          required: ['email', 'phoneNumber'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+            phoneNumber: { type: 'string' },
+            role: { $ref: '#/components/schemas/UserRole' }
+          }
+        },
+        DoctorProfileInput: {
+          type: 'object',
+          required: ['mdcnNumber', 'specialization', 'yearsOfExperience'],
+          properties: {
+            mdcnNumber: { type: 'string' },
+            specialization: { type: 'string' },
+            yearsOfExperience: { type: 'integer' },
+            verifiedAt: { type: 'string', format: 'date-time' },
+            canHandleVoiceText: { type: 'boolean' },
+            canHandleVoiceCall: { type: 'boolean' },
+            canHandleVideoCall: { type: 'boolean' }
+          }
+        },
+        DoctorPresenceInput: {
+          type: 'object',
+          properties: {
+            canHandleVoiceText: { type: 'boolean' },
+            canHandleVoiceCall: { type: 'boolean' },
+            canHandleVideoCall: { type: 'boolean' }
+          }
+        },
+        DoctorProfileRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            userId: { type: 'string' },
+            mdcnNumber: { type: 'string' },
+            specialization: { type: 'string' },
+            yearsOfExperience: { type: 'integer' },
+            verifiedAt: { type: 'string', format: 'date-time' },
+            currentTier: {
+              type: 'string',
+              enum: ['VOICE_TEXT_ONLY', 'VOICE_CALL_ENABLED', 'VIDEO_CALL_ENABLED']
+            },
+            canHandleVoiceText: { type: 'boolean' },
+            canHandleVoiceCall: { type: 'boolean' },
+            canHandleVideoCall: { type: 'boolean' },
+            deviceVerifiedAt: { type: 'string', format: 'date-time', nullable: true },
+            videoQualityPassed: { type: 'boolean' },
+            isOnline: { type: 'boolean' },
+            lastSeenAt: { type: 'string', format: 'date-time', nullable: true },
+            totalConsultations: { type: 'integer' },
+            averageRating: { type: 'number' },
+            acceptanceRate: { type: 'number' }
+          }
+        },
+        PatientProfileInput: {
+          type: 'object',
+          required: ['dateOfBirth'],
+          properties: {
+            dateOfBirth: { type: 'string', format: 'date' },
+            bloodGroup: { type: 'string' },
+            allergies: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            chronicConditions: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            emergencyName: { type: 'string' },
+            emergencyPhone: { type: 'string' }
+          }
+        },
+        PatientProfileRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            userId: { type: 'string' },
+            dateOfBirth: { type: 'string', format: 'date-time' },
+            bloodGroup: { type: 'string', nullable: true },
+            allergies: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            chronicConditions: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            emergencyName: { type: 'string', nullable: true },
+            emergencyPhone: { type: 'string', nullable: true }
+          }
+        },
+        BankDetailsInput: {
+          type: 'object',
+          required: ['accountName', 'accountNumber', 'bankCode'],
+          properties: {
+            accountName: { type: 'string' },
+            accountNumber: { type: 'string' },
+            bankCode: { type: 'string' }
+          }
+        },
+        WalletRecord: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            userId: { type: 'string' },
+            balance: { type: 'number' },
+            currency: { type: 'string' },
+            metadata: {
+              type: 'object',
+              additionalProperties: true,
+              nullable: true
+            },
+            dailyWithdrawalLimit: { type: 'number' },
+            lastWithdrawalAt: { type: 'string', format: 'date-time', nullable: true }
+          }
+        },
+        WalletUpdateResponse: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            walletId: { type: 'string' }
+          }
+        },
+        ProfileUpdateResponse: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            profileId: { type: 'string' }
+          }
+        },
         ConsultationTier: {
           type: 'string',
           enum: ['NORMAL', 'PRIORITY', 'SUPER']
@@ -92,14 +345,16 @@ const options: swaggerJsdoc.Options = {
             patientId: { type: 'string' },
             doctorId: { type: 'string', nullable: true },
             price: { type: 'number' },
-            paymentStatus: { type: 'string' },
+            paymentStatus: { $ref: '#/components/schemas/PaymentStatus' },
             paymentReference: { type: 'string', nullable: true },
             symptomsVoiceNote: { type: 'string', nullable: true },
             requestedAt: { type: 'string', format: 'date-time' },
             acceptedAt: { type: 'string', format: 'date-time', nullable: true },
             startedAt: { type: 'string', format: 'date-time', nullable: true },
             completedAt: { type: 'string', format: 'date-time', nullable: true },
-            expiryTime: { type: 'string', format: 'date-time' }
+            expiryTime: { type: 'string', format: 'date-time' },
+            expiryNotifiedAt: { type: 'string', format: 'date-time', nullable: true },
+            livenessRequestedAt: { type: 'string', format: 'date-time', nullable: true }
           },
           additionalProperties: true
         },
