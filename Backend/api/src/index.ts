@@ -4,6 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import swaggerUi from 'swagger-ui-express';
+import { promisify } from 'util';
+import { execFile } from 'child_process';
 import { monitoring } from './middleware/monitoring.middleware';
 import { errorHandler } from './middleware/error.middleware';
 import { faceService } from './services/face.service';
@@ -23,6 +25,7 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+const execFileAsync = promisify(execFile);
 
 app.use(
   helmet({
@@ -102,7 +105,66 @@ app.get('/api-docs.json', (_req, res) => {
 app.use(monitoring.trackError());
 app.use(errorHandler);
 
+async function runStartupMigrations() {
+  if (process.env.RUN_PRISMA_MIGRATIONS_ON_STARTUP !== 'true') {
+    monitoring.trackEvent('StartupMigrationSkipped', { reason: 'disabled' });
+    return;
+  }
+
+  const prismaBinary = require.resolve('prisma/build/index.js');
+
+  monitoring.trackEvent('StartupMigrationStarted', {
+    cwd: process.cwd(),
+    databaseConfigured: String(Boolean(process.env.DATABASE_URL))
+  });
+  // eslint-disable-next-line no-console
+  console.log('Running Prisma startup migrations...');
+
+  try {
+    const result = await execFileAsync(process.execPath, [prismaBinary, 'migrate', 'deploy'], {
+      cwd: process.cwd(),
+      env: process.env
+    });
+
+    monitoring.trackEvent('StartupMigrationCompleted', {
+      stdout: result.stdout?.slice(0, 2000) || ''
+    });
+    // eslint-disable-next-line no-console
+    console.log('Prisma startup migrations completed successfully.');
+    if (result.stdout) {
+      // eslint-disable-next-line no-console
+      console.log(result.stdout);
+    }
+  } catch (error) {
+    const stderr = error instanceof Error && 'stderr' in error ? String((error as { stderr?: string }).stderr || '') : '';
+    const stdout = error instanceof Error && 'stdout' in error ? String((error as { stdout?: string }).stdout || '') : '';
+
+    monitoring.trackException({
+      exception: error instanceof Error ? error : new Error('Unknown startup migration failure'),
+      properties: {
+        stage: 'startup-migrations',
+        stdout: stdout.slice(0, 2000),
+        stderr: stderr.slice(0, 2000)
+      }
+    });
+
+    // eslint-disable-next-line no-console
+    console.error('Prisma startup migrations failed.');
+    if (stdout) {
+      // eslint-disable-next-line no-console
+      console.error(stdout);
+    }
+    if (stderr) {
+      // eslint-disable-next-line no-console
+      console.error(stderr);
+    }
+
+    throw error;
+  }
+}
+
 async function initialize() {
+  await runStartupMigrations();
   await faceService.initializePersonGroup();
   await redisService.connect();
 

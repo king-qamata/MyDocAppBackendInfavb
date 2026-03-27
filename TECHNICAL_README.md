@@ -119,6 +119,23 @@ npm test
 npm run dev
 ```
 
+For Azure App Service, enable startup migrations on fresh environments:
+
+- Set `RUN_PRISMA_MIGRATIONS_ON_STARTUP=true`
+- Keep `DATABASE_URL` pointed at the target PostgreSQL database
+- Deploy the `prisma` package and `Backend/api/prisma/migrations` directory with the app
+
+When enabled, the API runs `prisma migrate deploy` during startup before it connects Redis or starts listening for requests. That prevents fresh-deployment failures like `The table public.User does not exist`.
+
+Expected App Service startup logs:
+
+- Success:
+  - `Running Prisma startup migrations...`
+  - `Prisma startup migrations completed successfully.`
+- Failure:
+  - `Prisma startup migrations failed.`
+  - Followed by Prisma CLI stdout/stderr explaining the migration problem
+
 ### Functions setup
 
 ```bash
@@ -267,6 +284,7 @@ Set in `Backend/api/.env` (or App Service settings in Azure):
 - `JWT_ISSUER`, `JWT_AUDIENCE`
 - `ACCESS_TOKEN_TTL_MINUTES`, `REFRESH_TOKEN_TTL_DAYS`, `REFRESH_TOKEN_SECRET`
 - `AUTH_STRICT_REFRESH_IP`
+- `RUN_PRISMA_MIGRATIONS_ON_STARTUP` (`true` in Azure for auto-initialization)
 - `FLUTTERWAVE_WEBHOOK_HASH`
 - `ACS_WEBHOOK_ALLOWED_TYPES` (optional)
 - `DEV_BOOTSTRAP_KEY` (dev-only)
@@ -317,6 +335,7 @@ Function deployment workflows:
 - Recommendation: keep sensitive values in Key Vault and inject through managed identity where possible.
 - Current payout job limitation: function payout flow requires a formal bank-details model in DB.
 - Initial Prisma schema migration now exists at `Backend/api/prisma/migrations/20260220_init/migration.sql` and should be applied before running the API against a fresh database.
+- Fresh Azure environments can auto-apply Prisma migrations at boot by setting `RUN_PRISMA_MIGRATIONS_ON_STARTUP=true`.
 - Password-based auth endpoints added for patient/doctor registration and login (see `/api/v1/auth/*`).
 - Refresh tokens added with rotation and reuse detection: `/api/v1/auth/refresh` revokes the old token and issues a new one. Use `/api/v1/auth/logout` to revoke a token or `/api/v1/auth/logout-all` to revoke all tokens for a user.
 - Access tokens now carry a token-version claim so password changes, logout-all, and refresh-token abuse can revoke existing sessions server-side once the Prisma client is regenerated.
