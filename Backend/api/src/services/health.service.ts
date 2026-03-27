@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { redisService } from './redis.service';
 
@@ -37,8 +38,10 @@ export class HealthService {
   }
 
   async getMetrics() {
+    const consultationMetrics = await this.getConsultationMetrics();
+
     return {
-      activeConsultations: await prisma.consultation.count({ where: { status: 'IN_PROGRESS' } }),
+      ...consultationMetrics,
       queueLengths: {
         normal: await redisService.getQueueLength('NORMAL'),
         priority: await redisService.getQueueLength('PRIORITY'),
@@ -55,6 +58,25 @@ export class HealthService {
     const started = Date.now();
     await prisma.$queryRaw`SELECT 1`;
     return { status: 'healthy', latency: Date.now() - started };
+  }
+
+  private async getConsultationMetrics() {
+    try {
+      return {
+        activeConsultations: await prisma.consultation.count({ where: { status: 'IN_PROGRESS' } }),
+        schemaReady: true
+      };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+        return {
+          activeConsultations: 0,
+          schemaReady: false,
+          schemaError: 'Consultation table is missing. Apply Prisma migrations to initialize the database.'
+        };
+      }
+
+      throw error;
+    }
   }
 
   private async checkRedis() {

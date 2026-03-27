@@ -557,11 +557,35 @@ const options: swaggerJsdoc.Options = {
         },
         MetricsResponse: {
           type: 'object',
-          additionalProperties: true,
+          properties: {
+            activeConsultations: { type: 'integer' },
+            schemaReady: { type: 'boolean' },
+            schemaError: { type: 'string', nullable: true },
+            queueLengths: {
+              type: 'object',
+              properties: {
+                normal: { type: 'integer' },
+                priority: { type: 'integer' },
+                super: { type: 'integer' }
+              }
+            },
+            systemLoad: {
+              type: 'object',
+              additionalProperties: true
+            }
+          },
           example: {
-            uptimeSeconds: 12345,
-            memory: { rss: 120586240, heapUsed: 42897408 },
-            activeConsultations: 12
+            activeConsultations: 12,
+            schemaReady: true,
+            queueLengths: {
+              normal: 3,
+              priority: 1,
+              super: 0
+            },
+            systemLoad: {
+              memory: { rss: 120586240, heapUsed: 42897408 },
+              uptime: 12345
+            }
           }
         },
         GenericMessageResponse: {

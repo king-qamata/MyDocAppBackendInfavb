@@ -11,6 +11,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:status": "prisma migrate status",
     "test": "vitest run tests --exclude \"tests/**/*.js\"",
     "test:watch": "vitest tests --exclude \"tests/**/*.js\""
   },

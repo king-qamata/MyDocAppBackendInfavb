@@ -112,6 +112,8 @@ Validation note:
 ```bash
 cd Backend/api
 npm install
+npm run prisma:migrate:deploy
+npm run prisma:generate
 npm run build
 npm test
 npm run dev
@@ -314,6 +316,7 @@ Function deployment workflows:
 - App Service integration expects secrets to be supplied through Terraform variables/CI secrets.
 - Recommendation: keep sensitive values in Key Vault and inject through managed identity where possible.
 - Current payout job limitation: function payout flow requires a formal bank-details model in DB.
+- Initial Prisma schema migration now exists at `Backend/api/prisma/migrations/20260220_init/migration.sql` and should be applied before running the API against a fresh database.
 - Password-based auth endpoints added for patient/doctor registration and login (see `/api/v1/auth/*`).
 - Refresh tokens added with rotation and reuse detection: `/api/v1/auth/refresh` revokes the old token and issues a new one. Use `/api/v1/auth/logout` to revoke a token or `/api/v1/auth/logout-all` to revoke all tokens for a user.
 - Access tokens now carry a token-version claim so password changes, logout-all, and refresh-token abuse can revoke existing sessions server-side once the Prisma client is regenerated.
